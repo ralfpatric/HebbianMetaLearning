@@ -51,7 +51,7 @@ def worker_process_hebb_coevo(arg):
 
 
 class EvolutionStrategyHebb(object):
-    def __init__(self, hebb_rule,  environment, init_weights = 'uni', population_size=100, sigma=0.1, learning_rate=0.2, decay=0.995, num_threads=1, distribution = 'normal'):
+    def __init__(self, hebb_rule,  environment, init_weights = 'uni', population_size=100, sigma=0.1, learning_rate=0.2, decay=0.995, num_threads=1, distribution = 'normal',use_reward_vector=False):
         
         self.hebb_rule = hebb_rule                     
         self.environment = environment                         
@@ -62,7 +62,8 @@ class EvolutionStrategyHebb(object):
         self.decay = decay
         self.num_threads = mp.cpu_count() if num_threads == -1 else num_threads
         self.update_factor = self.learning_rate / (self.POPULATION_SIZE * self.SIGMA)
-        self.distribution = distribution                      
+        self.distribution = distribution
+        self.env_reward = use_reward_vector
 
         # The number of hebbian coefficients per synapse
         if hebb_rule == 'A':                                                     
@@ -93,10 +94,10 @@ class EvolutionStrategyHebb(object):
             self.pixel_env = True
         elif len(env.observation_space.shape) == 1:   # State-based environment 
             self.pixel_env = False
-            input_dim = env.observation_space.shape[0]
+            input_dim = env.observation_space.shape[0]+(0,1)[use_reward_vector]
         elif isinstance(env.observation_space, Discrete):
             self.pixel_env = False
-            input_dim = env.observation_space.n
+            input_dim = env.observation_space.n + (0,1)[use_reward_vector]
         else:
             raise ValueError('Observation space not supported')
 
@@ -228,7 +229,7 @@ class EvolutionStrategyHebb(object):
                 heb_coeffs_try = np.array(heb_coeffs_try1)
 
                 
-                worker_args.append( (self.get_reward, self.hebb_rule, self.environment,  self.init_weights,  heb_coeffs_try) )
+                worker_args.append( (self.get_reward, self.hebb_rule, self.environment,  self.init_weights, heb_coeffs_try) )
                 
             rewards  = pool.map(worker_process_hebb, worker_args)
             
@@ -236,7 +237,7 @@ class EvolutionStrategyHebb(object):
             rewards = []
             for p in population:
                 heb_coeffs_try = np.array(self._get_params_try(self.coeffs, p))
-                rewards.append(self.get_reward( self.hebb_rule, self.environment,  self.init_weights, heb_coeffs_try))
+                rewards.append(self.get_reward(self.hebb_rule, self.environment,  self.init_weights, heb_coeffs_try,))
         rewards = np.array(rewards)
 
         return rewards
@@ -260,7 +261,7 @@ class EvolutionStrategyHebb(object):
                     coevolved_parameters_try1.append(self.initial_weights_co[index] + jittered) 
                 coevolved_parameters_try = np.array(coevolved_parameters_try1)
             
-                worker_args.append( (self.get_reward, self.hebb_rule,  self.environment,  self.init_weights, heb_coeffs_try, coevolved_parameters_try) )
+                worker_args.append( (self.get_reward, self.hebb_rule,  self.environment,  self.init_weights, heb_coeffs_try,coevolved_parameters_try) )
                 
             rewards  = pool.map(worker_process_hebb_coevo, worker_args)
             
@@ -346,9 +347,9 @@ class EvolutionStrategyHebb(object):
             # Print fitness and save Hebbian coefficients and/or Coevolved / CNNs parameters
             if (iteration + 1) % print_step == 0:
                 if self.pixel_env or self.coevolve_init:
-                    rew_ = np.sum(self.get_reward( self.hebb_rule,  self.environment,  self.init_weights, self.coeffs, self.initial_weights_co))
+                    rew_ = np.sum(self.get_reward( self.hebb_rule,  self.environment,  self.init_weights, self.coeffs, self.initial_weights_co,self.env_reward))
                 else:
-                    rew_ = np.sum(self.get_reward( self.hebb_rule,  self.environment,  self.init_weights, self.coeffs))                
+                    rew_ = np.sum(self.get_reward( self.hebb_rule,  self.environment,  self.init_weights, self.coeffs,self.env_reward))
                 print('iter %4i | reward: %3i |  update_factor: %f  lr: %f | sum_coeffs: %i sum_abs_coeffs: %4i' % (iteration + 1, rew_ , self.update_factor, self.learning_rate, int(np.sum(self.coeffs)), int(np.sum(abs(self.coeffs)))), flush=True)
                 torch.save(self.get_coeffs(),  path + "/"+ id_ + '/HEBcoeffs__' + self.environment + "__rew_" + str(int(rew_)) + '__' + self.hebb_rule + "__init_" + str(self.init_weights) + "__pop_" + str(self.POPULATION_SIZE) + '__coeffs' + "__{}.dat".format(iteration))
                 if self.coevolve_init:

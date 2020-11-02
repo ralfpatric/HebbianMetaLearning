@@ -61,6 +61,7 @@ train_hebb.py [--environment] [--hebb_rule] [--popsize] [--lr] [--decay] [--sigm
   --threads        Number of threads used to run evolution in parallel.
   --folder         folder to store the evolved Hebbian coefficients
   --distribution   Sampling distribution for initialize the Hebbian coefficients: normal, uniform
+  --env_reward	   Boolean, if true it includes the reward system into the project. Default: false
 
 ```
 

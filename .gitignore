@@ -3,6 +3,7 @@ __pycache__/
 ._*
 .pyc
 .vscode/
+.idea
 *.pyc
 *.sif
 heb_coeffs/

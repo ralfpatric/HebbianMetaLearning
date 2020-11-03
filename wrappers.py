@@ -5,6 +5,16 @@ import numpy as np
 # https://stable-baselines3.readthedocs.io/en/master/_modules/stable_baselines3/common/atari_wrappers.html
 
 
+class NormalizeObservationSpace(gym.ObservationWrapper):
+    def __init__(self,env):
+        super().__init__(env)
+        self.env=env
+
+    def observation(self, observation):
+        for i in range(observation.size):
+            observation[i] = (1 + observation[i]  / (1 + abs(observation[i] ))) * 0.5
+        return observation
+
 class EnvReward(gym.Wrapper):
     def __init__(self, env):
         super().__init__(env)

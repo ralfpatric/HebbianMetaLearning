@@ -9,7 +9,7 @@ from typing import List, Any
 
 from policies import MLP_heb, CNN_heb
 from hebbian_weights_update import *
-from wrappers import FireEpisodicLifeEnv, ScaledFloatFrame, EnvReward
+from wrappers import FireEpisodicLifeEnv, ScaledFloatFrame, EnvReward,NormalizeObservationSpace
 
 
 def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolved_parameters: List[np.array],use_env_reward=True) -> float:
@@ -53,9 +53,9 @@ def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolv
 
         # Load environment
         try:
-            env =gym.make(environment, verbose = 0)
+            env = NormalizeObservationSpace(gym.make(environment, verbose = 0))
         except:
-            env = gym.make(environment)
+            env = NormalizeObservationSpace(gym.make(environment))
 
         # env.render()  # bullet envs
 
@@ -172,7 +172,8 @@ def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolv
 
             # Environment simulation step
             observation, reward, done, info = env.step(action)
-            observation = np.append(observation, np.clip(reward,-1.0, 1.0))
+            #Todo: normalize reward before add to observation
+            observation = np.append(observation, (1 + reward  / (1 + abs(reward ))) * 0.5)
             if environment == 'AntBulletEnv-v0': reward = env.unwrapped.rewards[1] # Distance walked
             rew_ep += reward
 
@@ -193,6 +194,9 @@ def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolv
             else:
                 if done:
                     break
+
+            #Todo: Environment specific stopping condition
+
             # else:
             #     neg_count = neg_count+1 if reward < 0.0 else 0
             #     if (done or neg_count > 50):
@@ -225,6 +229,7 @@ def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolv
 
 
             # Normalise weights per layer
+            #Todo: normalize the weights specificly to the bipedal walker
             if normalised_weights == True:
                 (a, b, c) = (0, 1, 2) if not pixel_env else (2, 3, 4)
                 list(p.parameters())[a].data /= list(p.parameters())[a].__abs__().max()

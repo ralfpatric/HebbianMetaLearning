@@ -13,6 +13,8 @@ class NormalizeObservationSpace(gym.ObservationWrapper):
     def observation(self, observation):
         for i in range(observation.size):
             observation[i] = (1 + observation[i]  / (1 + abs(observation[i] ))) * 0.5
+
+
         return observation
 
 class EnvReward(gym.Wrapper):

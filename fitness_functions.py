@@ -175,6 +175,7 @@ def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolv
             #Todo: normalize reward before add to observation
             observation = np.append(observation, (1 + reward  / (1 + abs(reward ))) * 0.5)
             if environment == 'AntBulletEnv-v0': reward = env.unwrapped.rewards[1] # Distance walked
+
             rew_ep += reward
 
             # env.render('human') # Gym envs
@@ -191,11 +192,17 @@ def fitness_hebb(hebb_rule : str, environment: str, init_weights = 'uni', *evolv
                     neg_count = neg_count+1 if reward < 0.0 else 0
                     if (done or neg_count > 30):
                         break
+
+            # Todo: Environment specific stopping condition
+            elif environment == 'BipedalWalker-v3':
+                neg_count = neg_count + 1 if reward < 0.0 else 0
+                if (done or neg_count > 10):
+                    break
             else:
                 if done:
                     break
 
-            #Todo: Environment specific stopping condition
+
 
             # else:
             #     neg_count = neg_count+1 if reward < 0.0 else 0
